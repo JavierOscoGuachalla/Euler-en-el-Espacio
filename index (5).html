@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Euler en el Espacio · Lanzamiento de un cohete (1962)</title>
+<style>
+:root{
+  --bg:#0a0f1e; --panel:#111a2f; --panel2:#16213b; --line:#243253; --text:#e7edf9; --muted:#93a2c2;
+  --accent:#5eead4; --warn:#fbbf24; --bad:#f87171; --ok:#4ade80;
+  --euler:#f59e0b; --heun:#22d3ee; --rk4:#a3e635; --exact:#e5e7eb;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background-image:radial-gradient(1200px 500px at 85% -10%,rgba(94,234,212,.08),transparent 60%),radial-gradient(900px 400px at -10% 0%,rgba(96,165,250,.07),transparent 60%);}
+header{padding:28px 20px 18px;border-bottom:1px solid var(--line)}
+.wrap{max-width:1320px;margin:0 auto}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+h1{margin:6px 0 4px;font-size:clamp(22px,3.4vw,32px);line-height:1.2}
+.sub{color:var(--muted);max-width:900px;margin:0}
+.notice{margin-top:12px;font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding:4px 12px}
+main.wrap{padding:20px;display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:980px){main.wrap{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+aside.panel{position:sticky;top:12px}
+@media (max-width:980px){aside.panel{position:static}}
+h2{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+h2 .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);font-size:12px;color:var(--accent)}
+h3{font-size:14px;margin:0 0 8px;color:var(--muted);font-weight:600}
+.field{margin-bottom:10px}
+.field label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:3px}
+.field label b{color:var(--text);font-weight:600}
+.field input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#0c1427;color:var(--text);font:14px var(--mono)}
+.field input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.field.invalid input{border-color:var(--bad)}
+.field .err{display:none;color:var(--bad);font-size:12px;margin-top:3px}
+.field.invalid .err{display:block}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button,.btn{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 14px;border-radius:8px;font:600 13px system-ui;transition:.15s}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#04201c;border-color:var(--accent)}
+button.primary:hover{filter:brightness(1.08)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select{background:#0c1427;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:13px system-ui}
+.msgs{margin-top:12px;display:grid;gap:6px}
+.msg{font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid}
+.msg.warn{border-color:#6b5217;background:rgba(251,191,36,.08);color:#fcd979}
+.msg.err{border-color:#7a2a2a;background:rgba(248,113,113,.09);color:#fca5a5}
+.msg.ok{border-color:#235c37;background:rgba(74,222,128,.08);color:#86efac}
+.content{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;min-width:0}
+.panel{min-width:0}
+.model{display:grid;gap:6px;font-family:var(--mono);font-size:14px}
+.model .eq{background:#0c1427;border:1px solid var(--line);border-radius:8px;padding:8px 12px;overflow-x:auto;white-space:nowrap}
+.model .meta{color:var(--muted);font:13px system-ui}
+.toolbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:14px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);cursor:pointer;font-size:13px;user-select:none}
+.chip input{accent-color:var(--accent)}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;border-top:3px solid var(--line)}
+.card .t{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;display:flex;align-items:center;gap:6px}
+.card .big{font:600 22px var(--mono);margin:4px 0 2px}
+.card dl{margin:6px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}
+.card dt{color:var(--muted)} .card dd{margin:0;text-align:right;font-family:var(--mono)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:16px}
+.chartbox h3{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cw{position:relative}
+canvas{display:block;width:100%;height:320px;background:#0c1427;border:1px solid var(--line);border-radius:10px;touch-action:pan-y}
+.tip{position:absolute;pointer-events:none;background:rgba(8,12,24,.95);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:12px var(--mono);display:none;white-space:nowrap;z-index:5}
+.tip .r{display:flex;gap:8px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:2px 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid}
+.tablewrap{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font:13px var(--mono)}
+th,td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+thead th{position:sticky;top:0;background:#1b2850;z-index:2;font:600 12px system-ui;color:var(--text)}
+tbody tr:nth-child(even){background:rgba(255,255,255,.025)}
+tbody tr:hover{background:rgba(94,234,212,.08)}
+td:first-child,th:first-child{position:sticky;left:0;background:#16213b;text-align:center;z-index:1}
+thead th:first-child{z-index:3;background:#1b2850}
+tr.grp td{background:#1b2850!important;text-align:left;font:600 12px system-ui;color:var(--accent)}
+tr.grp td:first-child{text-align:left}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tabs button{border:0;border-radius:0;background:transparent;padding:6px 12px}
+.tabs button[aria-selected="true"]{background:var(--accent);color:#04201c}
+.small{font-size:12px;color:var(--muted)}
+footer{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Métodos Numéricos · Desafío «Euler en el espacio»</div>
+    <h1>Lanzamiento vertical de un cohete — NASA, 1962</h1>
+    <p class="sub">Simulador de velocidad y altura durante el ascenso, resuelto con Euler, Heun y Runge-Kutta de 4.º orden (RK4) y comparado con la solución analítica exacta.</p>
+    <p class="notice">Simulación educativa inspirada en el contexto de <i>Talentos ocultos (Hidden Figures)</i>. No pretende reproducir el modelo que la NASA utilizó en lanzamientos reales: se asumen masa, empuje, gravedad y resistencia constantes.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <aside class="panel" aria-label="Parámetros">
+    <h2><span class="n">1</span>Parámetros</h2>
+    <form id="form" novalidate autocomplete="off">
+      <div class="field" data-f="m"><label for="m"><span>Masa <b>m</b></span><span>kg</span></label><input id="m" type="number" step="any" inputmode="decimal"><div class="err"></div></div>
+      <div class="field" data-f="T"><label for="T"><span>Empuje <b>T</b></span><span>N</span></label><input id="T" type="number" step="any" inputmode="decimal"><div class="err"></div></div>
+      <div class="field" data-f="g"><label for="g"><span>Gravedad <b>g</b></span><span>m/s²</span></label><input id="g" type="number" step="any" inputmode="decimal"><div class="err"></div></div>
+      <div class="field" data-f="k"><label for="k"><span>Resistencia <b>k</b></span><span>N·s/m</span></label><input id="k" type="number" step="any" inputmode="decimal"><div class="err"></div></div>
+      <div class="row2">
+        <div class="field" data-f="v0"><label for="v0"><span>Velocidad inicial <b>v₀</b></span><span>m/s</span></label><input id="v0" type="number" step="any" inputmode="decimal"><div class="err"></div></div>
+        <div class="field" data-f="y0"><label for="y0"><span>Altura inicial <b>y₀</b></span><span>m</span></label><input id="y0" type="number" step="any" inputmode="decimal"><div class="err"></div></div>
+      </div>
+      <div class="row2">
+        <div class="field" data-f="tf"><label for="tf"><span>Tiempo <b>t</b></span><span>s</span></label><input id="tf" type="number" step="any" inputmode="decimal"><div class="err"></div></div>
+        <div class="field" data-f="h"><label for="h"><span>Paso <b>h</b></span><span>s</span></label><input id="h" type="number" step="any" inputmode="decimal"><div class="err"></div></div>
+      </div>
+      <div class="btns">
+        <button type="submit" class="primary">▶ Ejecutar simulación</button>
+        <button type="button" id="reset">↺ Restablecer</button>
+      </div>
+    </form>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <p class="small" style="margin-top:14px">Atajo: pulsa <b>Enter</b> en cualquier campo para recalcular. Máximo {MAX} pasos por simulación.</p>
+  </aside>
+
+  <div class="content">
+    <section class="panel" id="sec-model">
+      <h2><span class="n">2</span>Modelo con los parámetros actuales</h2>
+      <div class="model" id="model"></div>
+    </section>
+
+    <section class="panel" id="sec-results">
+      <h2><span class="n">3</span>Resultados</h2>
+      <div class="toolbar">
+        <span class="small">Métodos visibles:</span>
+        <label class="chip"><input type="checkbox" data-m="euler" checked><span class="dot" style="background:var(--euler)"></span>Euler</label>
+        <label class="chip"><input type="checkbox" data-m="heun" checked><span class="dot" style="background:var(--heun)"></span>Heun</label>
+        <label class="chip"><input type="checkbox" data-m="rk4" checked><span class="dot" style="background:var(--rk4)"></span>RK4</label>
+        <label class="chip"><input type="checkbox" data-m="exact" checked><span class="dot" style="background:var(--exact)"></span>Exacta</label>
+      </div>
+      <div class="cards" id="general"></div>
+      <div class="cards" id="cards" style="margin-top:12px"></div>
+    </section>
+
+    <section class="panel" id="sec-charts">
+      <h2><span class="n">4</span>Gráficas comparativas</h2>
+      <p class="small" style="margin-top:-4px">Pasa el cursor (o el dedo) sobre una gráfica para leer los valores en cada instante de la tabla.</p>
+      <div class="charts">
+        <div class="chartbox"><h3>Velocidad vs. tiempo</h3><div class="legend" id="lg-v"></div><div class="cw"><canvas id="c-v" role="img" aria-label="Velocidad contra tiempo"></canvas><div class="tip" id="tip-v"></div></div></div>
+        <div class="chartbox"><h3>Altura vs. tiempo</h3><div class="legend" id="lg-y"></div><div class="cw"><canvas id="c-y" role="img" aria-label="Altura contra tiempo"></canvas><div class="tip" id="tip-y"></div></div></div>
+        <div class="chartbox" style="grid-column:1/-1">
+          <h3><span>Error absoluto vs. tiempo</span>
+            <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <select id="err-var" aria-label="Variable del error"><option value="v">Error de velocidad (m/s)</option><option value="y">Error de altura (m)</option></select>
+              <label class="chip"><input type="checkbox" id="err-log" checked>Escala logarítmica</label>
+            </span></h3>
+          <div class="legend" id="lg-e"></div><div class="cw"><canvas id="c-e" role="img" aria-label="Error absoluto contra tiempo"></canvas><div class="tip" id="tip-e"></div></div>
+          <p class="small">El error es |valor exacto − valor aproximado|. En escala logarítmica no se dibujan los puntos con error nulo (t = 0).</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="sec-table">
+      <h2><span class="n">5</span>Tabla de iteraciones</h2>
+      <div class="toolbar">
+        <div class="tabs" role="tablist">
+          <button role="tab" id="tab-sol" aria-selected="true">Soluciones</button>
+          <button role="tab" id="tab-err" aria-selected="false">Errores absolutos</button>
+        </div>
+        <select id="csv-sep" aria-label="Separador CSV"><option value=",">CSV: coma (,)</option><option value=";">CSV: punto y coma (;)</option></select>
+        <button id="csv-main">⬇ Exportar CSV completo</button>
+        <span class="small" id="table-info"></span>
+      </div>
+      <div class="tablewrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    </section>
+
+    <section class="panel" id="sec-steps">
+      <h2><span class="n">6</span>Comparación del tamaño del paso (h = 2, 1, 0.5)</h2>
+      <p class="small" style="margin-top:-4px">Usa los demás parámetros del panel. El orden observado se estima como p = log₂(E(2h)/E(h)) con el error de velocidad en t final; se espera p≈1 (Euler), 2 (Heun) y 4 (RK4).</p>
+      <div class="toolbar"><button id="csv-steps">⬇ Exportar CSV de la comparación</button></div>
+      <div class="tablewrap" style="max-height:none"><table id="tbl-steps"><thead></thead><tbody></tbody></table></div>
+      <div class="chartbox" style="margin-top:16px"><h3>Error final de velocidad vs. h (escala log-log)</h3><div class="legend" id="lg-s"></div><div class="cw"><canvas id="c-s" role="img" aria-label="Error final contra tamaño de paso"></canvas><div class="tip" id="tip-s"></div></div></div>
+    </section>
+  </div>
+</main>
+<footer>Euler: yₙ₊₁ = yₙ + h·f(tₙ,yₙ) · Heun (trapecio predictor-corrector) · RK4 clásico · Sistema integrado completo Y = (v, y) con cada método.</footer>
+
+<script>
+// ==CORE-START==
+const DEFAULTS = {m:1000, T:15000, g:9.81, k:100, v0:0, y0:0, tf:20, h:2};
+const MAX_STEPS = 20000;
+const METHODS = ['euler','heun','rk4'];
+
+function coefficients(p){ return {a: p.T/p.m - p.g, b: p.k/p.m}; }          // v' = a - b v
+function rhs(c, v){ return [c.a - c.b*v, v]; }                                // Y' = (v', y')
+function timeGrid(tf, h){
+  const n = Math.max(1, Math.ceil(tf/h - 1e-9));
+  const ts = new Array(n+1);
+  for(let i=0;i<n;i++) ts[i] = i*h;
+  ts[n] = tf;                                                                 // el último paso llega exactamente a tf
+  return ts;
+}
+function integrate(p, h, method){
+  const c = coefficients(p), ts = timeGrid(p.tf, h), n = ts.length;
+  const V = new Float64Array(n), Y = new Float64Array(n);
+  let v = p.v0, y = p.y0; V[0]=v; Y[0]=y;
+  for(let i=1;i<n;i++){
+    const dt = ts[i]-ts[i-1];
+    let nv, ny;
+    if(method==='euler'){
+      const k1 = rhs(c, v);
+      nv = v + dt*k1[0]; ny = y + dt*k1[1];
+    } else if(method==='heun'){
+      const k1 = rhs(c, v);
+      const k2 = rhs(c, v + dt*k1[0]);
+      nv = v + dt/2*(k1[0]+k2[0]); ny = y + dt/2*(k1[1]+k2[1]);
+    } else {
+      const k1 = rhs(c, v);
+      const k2 = rhs(c, v + dt/2*k1[0]);
+      const k3 = rhs(c, v + dt/2*k2[0]);
+      const k4 = rhs(c, v + dt*k3[0]);
+      nv = v + dt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+      ny = y + dt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+    }
+    v = nv; y = ny; V[i]=v; Y[i]=y;
+  }
+  return {ts, V, Y, steps: n-1};
+}
+function exactAt(p, t){
+  const c = coefficients(p);
+  if(Math.abs(c.b) < 1e-12){                                                  // k = 0: aceleración constante
+    return [p.v0 + c.a*t, p.y0 + p.v0*t + 0.5*c.a*t*t];
+  }
+  const vt = c.a / c.b, e = Math.exp(-c.b*t);
+  return [vt + (p.v0 - vt)*e, p.y0 + vt*t + (p.v0 - vt)*(1 - e)/c.b];
+}
+function exactSeries(p, ts){
+  const V = new Float64Array(ts.length), Y = new Float64Array(ts.length);
+  for(let i=0;i<ts.length;i++){ const r = exactAt(p, ts[i]); V[i]=r[0]; Y[i]=r[1]; }
+  return {V, Y};
+}
+function simulate(p, h){
+  const out = {p, h, ts: null, m:{}};
+  for(const m of METHODS){ out.m[m] = integrate(p, h, m); }
+  out.ts = out.m.euler.ts;
+  out.ex = exactSeries(p, out.ts);
+  out.err = {};
+  for(const m of METHODS){
+    const r = out.m[m], n = r.ts.length, EV = new Float64Array(n), EY = new Float64Array(n);
+    for(let i=0;i<n;i++){ EV[i] = Math.abs(out.ex.V[i]-r.V[i]); EY[i] = Math.abs(out.ex.Y[i]-r.Y[i]); }
+    out.err[m] = {EV, EY};
+  }
+  return out;
+}
+function validate(raw){
+  const errors = {}, warnings = [];
+  const p = {};
+  for(const key of Object.keys(DEFAULTS)){
+    const s = String(raw[key]).trim();
+    const x = s === '' ? NaN : Number(s);
+    if(!Number.isFinite(x)){ errors[key] = 'Introduce un número válido.'; continue; }
+    p[key] = x;
+  }
+  if(!errors.m && p.m <= 0) errors.m = 'La masa debe ser mayor que 0 (evita división por cero).';
+  if(!errors.T && p.T < 0) errors.T = 'El empuje no puede ser negativo.';
+  if(!errors.g && p.g < 0) errors.g = 'La gravedad no puede ser negativa.';
+  if(!errors.k && p.k < 0) errors.k = 'El coeficiente de resistencia no puede ser negativo.';
+  if(!errors.tf && p.tf <= 0) errors.tf = 'El tiempo debe ser mayor que 0.';
+  if(!errors.tf && p.tf > 1e5) errors.tf = 'Tiempo demasiado grande (máx. 100000 s).';
+  if(!errors.h && p.h <= 0) errors.h = 'El paso debe ser mayor que 0.';
+  if(!errors.h && !errors.tf && p.h > p.tf) errors.h = 'El paso no puede superar el tiempo de simulación.';
+  if(!errors.h && !errors.tf && Math.ceil(p.tf/p.h - 1e-9) > MAX_STEPS)
+    errors.h = 'Demasiados pasos (' + Math.ceil(p.tf/p.h) + '). Máximo ' + MAX_STEPS + '; aumenta h o reduce t.';
+  if(Object.keys(errors).length === 0){
+    const c = coefficients(p);
+    if(c.a < 0 && p.v0 <= 0) warnings.push('El empuje es menor que el peso (T < m·g): el cohete no despega. El modelo no incluye el suelo, por lo que la altura puede volverse negativa.');
+    if(p.h*c.b > 2) warnings.push('h·(k/m) = ' + (p.h*c.b).toFixed(3) + ' > 2: Euler y Heun pueden oscilar o ser inestables con este paso.');
+  }
+  return {ok: Object.keys(errors).length === 0, errors, warnings, p};
+}
+function observedOrder(e1, e2){ return (e1>0 && e2>0) ? Math.log(e1/e2)/Math.LN2 : NaN; }
+// ==CORE-END==
+
+if (typeof document !== 'undefined') {
+(function(){
+const NAMES = {euler:'Euler', heun:'Heun', rk4:'RK4', exact:'Exacta'};
+const COLORS = {euler:'#f59e0b', heun:'#22d3ee', rk4:'#a3e635', exact:'#e5e7eb'};
+const MARKERS = {euler:'square', heun:'triangle', rk4:'circle'};
+const REFS = {2:[46.32727993,574.72720067], 1:[45.59017163,582.09828373], 0.5:[45.23021907,585.69780926]};
+const STEP_LIST = [2,1,0.5];
+const $ = id => document.getElementById(id);
+const FIELDS = Object.keys(DEFAULTS);
+const state = {sim:null, steps:null, visible:{euler:true,heun:true,rk4:true,exact:true}, tab:'sol'};
+
+document.querySelectorAll('.small').forEach(el => { el.innerHTML = el.innerHTML.replace('{MAX}', MAX_STEPS); });
+
+const fmt = (x,d=4) => Number.isFinite(x) ? x.toFixed(d) : '—';
+const fmtErr = x => !Number.isFinite(x) ? '—' : x===0 ? '0' : x<1e-4 ? x.toExponential(3) : x.toFixed(6);
+const fmtT = x => Number.isInteger(x) ? String(x) : String(+x.toFixed(6));
+
+function readRaw(){ const r={}; FIELDS.forEach(k => r[k] = $(k).value); return r; }
+function writeDefaults(){ FIELDS.forEach(k => $(k).value = DEFAULTS[k]); }
+
+function showMessages(v){
+  FIELDS.forEach(k => {
+    const box = document.querySelector('.field[data-f="'+k+'"]');
+    box.classList.toggle('invalid', !!v.errors[k]);
+    box.querySelector('.err').textContent = v.errors[k] || '';
+    $(k).setAttribute('aria-invalid', v.errors[k] ? 'true' : 'false');
+  });
+  const box = $('msgs'); box.innerHTML = '';
+  const add = (cls, txt) => { const d=document.createElement('div'); d.className='msg '+cls; d.textContent=txt; box.appendChild(d); };
+  if(!v.ok) add('err','Corrige los campos marcados para ejecutar la simulación.');
+  v.warnings.forEach(w => add('warn', w));
+  return add;
+}
+
+function run(){
+  const v = validate(readRaw());
+  const add = showMessages(v);
+  if(!v.ok) return;
+  const p = v.p;
+  state.sim = simulate(p, p.h);
+  state.steps = STEP_LIST.map(h => {
+    if(Math.ceil(p.tf/h - 1e-9) > MAX_STEPS) return {h, skipped:true};
+    return Object.assign({h}, {sim: simulate(p, h)});
+  });
+  // comprobación contra valores de referencia (solo con parámetros del enunciado)
+  const isDefault = FIELDS.filter(k => k!=='h').every(k => p[k] === DEFAULTS[k]);
+  if(isDefault && REFS[p.h]){
+    const e = state.sim.m.euler, n = e.V.length-1;
+    const ok = Math.abs(e.V[n]-REFS[p.h][0])<5e-8 && Math.abs(e.Y[n]-REFS[p.h][1])<5e-8;
+    add(ok?'ok':'err', ok ? '✓ Euler con h = '+p.h+' coincide con el valor de referencia (v = '+REFS[p.h][0]+' m/s, y = '+REFS[p.h][1]+' m).'
+                          : '✗ Euler no coincide con el valor de referencia del enunciado.');
+  }
+  renderAll();
+}
+
+/* ---------- Render ---------- */
+function renderModel(){
+  const p = state.sim.p, c = coefficients(p);
+  const vt = Math.abs(c.b) < 1e-12 ? null : c.a/c.b;
+  $('model').innerHTML =
+    '<div class="meta">Segunda ley de Newton con tres fuerzas: empuje T (↑), peso m·g (↓) y resistencia k·v (↓).</div>'+
+    '<div class="eq">m·dv/dt = T − m·g − k·v</div>'+
+    '<div class="eq">v′ = '+fmt(c.a,4)+' − '+fmt(c.b,4)+'·v &nbsp;&nbsp; y′ = v &nbsp;&nbsp; v(0) = '+fmtT(p.v0)+', y(0) = '+fmtT(p.y0)+'</div>'+
+    '<div class="eq">'+(vt===null
+      ? 'v(t) = v₀ + a·t &nbsp;(k = 0: aceleración constante a = '+fmt(c.a,4)+' m/s²)'
+      : 'v(t) = '+fmt(vt,4)+' + ('+fmt(p.v0-vt,4)+')·e^(−'+fmt(c.b,4)+'·t) &nbsp;&nbsp; y(t) = '+fmt(p.y0,4)+' + '+fmt(vt,4)+'·t + ('+fmt((p.v0-vt)/c.b,4)+')·(1 − e^(−'+fmt(c.b,4)+'·t))')+'</div>'+
+    '<div class="meta">a = T/m − g = '+fmt(c.a,4)+' m/s² · b = k/m = '+fmt(c.b,4)+' s⁻¹ · velocidad límite a/b = '+(vt===null?'— (no existe con k = 0)':fmt(vt,4)+' m/s')+'</div>';
+}
+
+function renderCards(){
+  const s = state.sim, n = s.ts.length-1, p = s.p;
+  const vt = Math.abs(coefficients(p).b)<1e-12 ? null : coefficients(p).a/coefficients(p).b;
+  $('general').innerHTML =
+    card('Tiempo final', fmt(p.tf,4)+' s', '', 'var(--accent)')+
+    card('Iteraciones', String(n), [['Paso h', fmtT(p.h)+' s'],['Último paso', fmt(s.ts[n]-s.ts[n-1],4)+' s']], 'var(--accent)')+
+    card('Velocidad límite', vt===null?'—':fmt(vt,4)+' m/s', [['v exacta (t final)', fmt(s.ex.V[n],4)+' m/s']], 'var(--accent)');
+  let html = '';
+  for(const m of METHODS){
+    if(!state.visible[m]) continue;
+    const r = s.m[m], e = s.err[m];
+    html += card(NAMES[m], fmt(r.V[n],8)+' m/s', [['Altura final', fmt(r.Y[n],8)+' m'],['|Error v|', fmtErr(e.EV[n])+' m/s'],['|Error y|', fmtErr(e.EY[n])+' m'],['Iteraciones', String(r.steps)]], COLORS[m], true);
+  }
+  if(state.visible.exact) html += card('Solución exacta', fmt(s.ex.V[n],8)+' m/s', [['Altura final', fmt(s.ex.Y[n],8)+' m'],['|Error v|','0'],['|Error y|','0']], COLORS.exact, true);
+  $('cards').innerHTML = html;
+}
+function card(title, big, rows, color, dot){
+  let dl = '';
+  if(rows && rows.length) dl = '<dl>'+rows.map(r => '<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('')+'</dl>';
+  return '<div class="card" style="border-top-color:'+color+'"><div class="t">'+(dot?'<span class="dot" style="background:'+color+'"></span>':'')+title+'</div><div class="big">'+big+'</div>'+dl+'</div>';
+}
+
+function renderTable(){
+  const s = state.sim, n = s.ts.length;
+  const head = $('tbl').tHead, body = $('tbl').tBodies[0];
+  const isSol = state.tab === 'sol';
+  const cols = [['Tiempo (s)']];
+  const defs = [];
+  if(isSol){
+    for(const m of METHODS) if(state.visible[m]){ cols.push(['Velocidad '+NAMES[m]], ['Altura '+NAMES[m]]); defs.push(m); }
+    if(state.visible.exact){ cols.push(['Velocidad exacta'], ['Altura exacta']); }
+  } else {
+    for(const m of METHODS) if(state.visible[m]){ cols.push(['|Error v| '+NAMES[m]], ['|Error y| '+NAMES[m]]); defs.push(m); }
+  }
+  head.innerHTML = '<tr>'+cols.map(c => '<th>'+c[0]+'</th>').join('')+'</tr>';
+  const rows = new Array(n);
+  for(let i=0;i<n;i++){
+    let r = '<tr><td>'+fmtT(s.ts[i])+'</td>';
+    if(isSol){
+      for(const m of defs) r += '<td>'+fmt(s.m[m].V[i],6)+'</td><td>'+fmt(s.m[m].Y[i],6)+'</td>';
+      if(state.visible.exact) r += '<td>'+fmt(s.ex.V[i],6)+'</td><td>'+fmt(s.ex.Y[i],6)+'</td>';
+    } else {
+      for(const m of defs) r += '<td>'+fmtErr(s.err[m].EV[i])+'</td><td>'+fmtErr(s.err[m].EY[i])+'</td>';
+    }
+    rows[i] = r+'</tr>';
+  }
+  body.innerHTML = rows.join('');
+  $('table-info').textContent = (n-1)+' pasos · '+n+' filas (t = 0 … '+fmtT(s.ts[n-1])+' s)';
+}
+
+/* ---------- Charts ---------- */
+const charts = {};
+function niceTicks(min,max,count){
+  const span = (max-min)||1, raw = span/count, mag = Math.pow(10, Math.floor(Math.log10(raw))), nr = raw/mag;
+  const step = (nr<1.5?1:nr<3?2:nr<7?5:10)*mag;
+  const ticks = []; for(let t=Math.ceil(min/step-1e-9)*step; t<=max+step*1e-9; t+=step) ticks.push(+t.toFixed(12));
+  return {ticks, step};
+}
+function decimalsFor(step){ return Math.max(0, -Math.floor(Math.log10(step)+1e-9)); }
+function drawChart(canvas, cfg, hover){
+  const dpr = window.devicePixelRatio||1, W = canvas.clientWidth, H = canvas.clientHeight;
+  if(canvas.width !== Math.round(W*dpr) || canvas.height !== Math.round(H*dpr)){ canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr); }
+  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  const pad = {l:W<420?56:70, r:16, t:14, b:46};
+  const pw = W-pad.l-pad.r, ph = H-pad.t-pad.b;
+  const ser = cfg.series.filter(s => s.xs.length);
+  const tx = x => cfg.logX ? Math.log10(x) : x, ty = y => cfg.logY ? Math.log10(y) : y;
+  let xmin=Infinity,xmax=-Infinity,ymin=Infinity,ymax=-Infinity;
+  ser.forEach(s => { for(let i=0;i<s.xs.length;i++){ const x=s.xs[i], y=s.ys[i]; if(!Number.isFinite(y)) continue; if(cfg.logY && y<=0) continue;
+    xmin=Math.min(xmin,x); xmax=Math.max(xmax,x); ymin=Math.min(ymin,y); ymax=Math.max(ymax,y);} });
+  ctx.font = '12px system-ui'; ctx.fillStyle = '#93a2c2'; ctx.strokeStyle = '#243253'; ctx.lineWidth = 1;
+  if(!Number.isFinite(xmin)){ ctx.textAlign='center'; ctx.fillText(cfg.empty||'Sin datos que mostrar', W/2, H/2); return; }
+  if(xmin===xmax){ xmin-=1; xmax+=1; }
+  let yt;
+  if(cfg.logY){
+    const lo = Math.floor(Math.log10(ymin)), hi = Math.max(Math.ceil(Math.log10(ymax)), lo+1);
+    ymin = Math.pow(10,lo); ymax = Math.pow(10,hi); yt = [];
+    for(let e=lo;e<=hi;e++) yt.push(Math.pow(10,e));
+  } else {
+    if(cfg.zero) ymin = Math.min(0, ymin);
+    if(ymin===ymax){ ymax = ymin+1; }
+    const nt = niceTicks(ymin, ymax, 6); yt = nt.ticks;
+    ymin = Math.min(ymin, yt[0]); ymax = yt[yt.length-1] < ymax ? yt[yt.length-1]+nt.step : yt[yt.length-1];
+    yt = niceTicks(ymin, ymax, 6).ticks; cfg._yd = decimalsFor(nt.step);
+  }
+  let xt, xd = 0;
+  if(cfg.xTicks){ xt = cfg.xTicks; }
+  else { const nt = niceTicks(xmin, xmax, 8); xt = nt.ticks; xd = decimalsFor(nt.step); }
+  const x0 = tx(xmin), x1 = tx(xmax), y0 = ty(ymin), y1 = ty(ymax);
+  const sx = x => pad.l + (tx(x)-x0)/((x1-x0)||1)*pw, sy = y => pad.t + ph - (ty(y)-y0)/((y1-y0)||1)*ph;
+  // rejilla y etiquetas
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  yt.forEach(v => { const yy = sy(v); ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy); ctx.stroke();
+    const lab = cfg.logY ? v.toExponential(0).replace('e+','e') : v.toFixed(cfg._yd||0); ctx.fillText(lab, pad.l-8, yy); });
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  xt.forEach(v => { const xx = sx(v); ctx.beginPath(); ctx.moveTo(xx,pad.t); ctx.lineTo(xx,pad.t+ph); ctx.stroke(); ctx.fillText(cfg.xTicks? String(v): v.toFixed(xd), xx, pad.t+ph+6); });
+  ctx.strokeStyle='#4b5d8a'; ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,pad.t+ph); ctx.lineTo(W-pad.r,pad.t+ph); ctx.stroke();
+  ctx.fillStyle='#c4cfe8'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillText(cfg.xLabel||'', pad.l+pw/2, H-8);
+  ctx.save(); ctx.translate(14, pad.t+ph/2); ctx.rotate(-Math.PI/2); ctx.fillText(cfg.yLabel||'', 0, 0); ctx.restore();
+  // series
+  ctx.save(); ctx.beginPath(); ctx.rect(pad.l-1,pad.t-1,pw+2,ph+2); ctx.clip();
+  ser.forEach(s => {
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.width||2; ctx.setLineDash(s.dash||[]);
+    ctx.beginPath(); let pen = false;
+    for(let i=0;i<s.xs.length;i++){ const y = s.ys[i];
+      if(!Number.isFinite(y) || (cfg.logY && y<=0)){ pen=false; continue; }
+      const X = sx(s.xs[i]), Y = sy(y); if(pen) ctx.lineTo(X,Y); else { ctx.moveTo(X,Y); pen=true; } }
+    ctx.stroke(); ctx.setLineDash([]);
+    if(s.marker && s.xs.length <= 60){ ctx.fillStyle = s.color;
+      for(let i=0;i<s.xs.length;i++){ const y=s.ys[i]; if(!Number.isFinite(y)||(cfg.logY&&y<=0)) continue; drawMarker(ctx, s.marker, sx(s.xs[i]), sy(y), 3.6); } }
+  });
+  ctx.restore();
+  if(hover!=null){
+    const xv = cfg.times[hover], xx = sx(xv);
+    ctx.strokeStyle='rgba(231,237,249,.45)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(xx,pad.t); ctx.lineTo(xx,pad.t+ph); ctx.stroke(); ctx.setLineDash([]);
+    ser.forEach(s => { if(!s.hv) return; const y = s.hv[hover]; if(!Number.isFinite(y)||(cfg.logY&&y<=0)) return;
+      ctx.fillStyle = s.color; ctx.strokeStyle='#0c1427'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(xx, sy(y), 5, 0, 7); ctx.fill(); ctx.stroke(); });
+  }
+  canvas._geo = {sx, pad, pw, W, H, tx, x0, x1};
+}
+function drawMarker(ctx, kind, x, y, r){
+  ctx.beginPath();
+  if(kind==='square') ctx.rect(x-r,y-r,2*r,2*r);
+  else if(kind==='triangle'){ ctx.moveTo(x,y-r*1.2); ctx.lineTo(x+r*1.1,y+r*.9); ctx.lineTo(x-r*1.1,y+r*.9); ctx.closePath(); }
+  else ctx.arc(x,y,r,0,7);
+  ctx.fill();
+}
+function registerChart(key, canvasId, tipId, cfgFn, valFmt){
+  const canvas = $(canvasId), tip = $(tipId);
+  const entry = {canvas, tip, cfgFn, cfg:null, valFmt};
+  charts[key] = entry;
+  function idxFromEvent(ev){
+    const g = canvas._geo; if(!g || !entry.cfg) return null;
+    const r = canvas.getBoundingClientRect(); const px = (ev.clientX - r.left);
+    const times = entry.cfg.times; let best = 0, bd = Infinity;
+    for(let i=0;i<times.length;i++){ const d = Math.abs(g.sx(times[i]) - px); if(d<bd){bd=d;best=i;} }
+    return best;
+  }
+  function move(ev){
+    const i = idxFromEvent(ev); if(i==null) return;
+    drawChart(canvas, entry.cfg, i);
+    const cfg = entry.cfg; let h = '<div style="margin-bottom:4px;color:#93a2c2">'+cfg.timeLabel+' = '+fmtT(+cfg.times[i].toFixed(6))+(cfg.timeUnit||' s')+'</div>';
+    cfg.series.forEach(s => { if(!s.hv) return; h += '<div class="r"><span class="dot" style="background:'+s.color+'"></span>'+s.name+': '+entry.valFmt(s.hv[i])+'</div>'; });
+    tip.innerHTML = h; tip.style.display = 'block';
+    const wr = canvas.parentElement.getBoundingClientRect(), cr = canvas.getBoundingClientRect();
+    let left = ev.clientX - wr.left + 14; if(left + tip.offsetWidth > wr.width - 4) left = ev.clientX - wr.left - tip.offsetWidth - 14;
+    let top = ev.clientY - wr.top + 10; if(top + tip.offsetHeight > wr.height) top = wr.height - tip.offsetHeight - 4;
+    tip.style.left = Math.max(4,left)+'px'; tip.style.top = Math.max(4,top)+'px';
+  }
+  canvas.addEventListener('pointermove', move);
+  canvas.addEventListener('pointerdown', move);
+  canvas.addEventListener('pointerleave', () => { tip.style.display='none'; if(entry.cfg) drawChart(canvas, entry.cfg, null); });
+}
+function legendHTML(keys, withExact){
+  let h = '';
+  keys.forEach(m => { h += '<span><i style="border-color:'+COLORS[m]+(m==='exact'?';border-top-style:dashed':'')+'"></i>'+NAMES[m]+'</span>'; });
+  return h;
+}
+function denseTimes(tf, n=300){ const a=[]; for(let i=0;i<=n;i++) a.push(tf*i/n); return a; }
+
+function seriesFor(kind){            // kind: 'V' | 'Y'
+  const s = state.sim, out = [];
+  if(state.visible.exact){
+    const dt = denseTimes(s.p.tf), dv = dt.map(t => exactAt(s.p,t)[kind==='V'?0:1]);
+    out.push({name:'Exacta', color:COLORS.exact, xs:dt, ys:dv, dash:[7,5], width:2, hv:s.ex[kind]});
+  }
+  for(const m of METHODS) if(state.visible[m])
+    out.push({name:NAMES[m], color:COLORS[m], xs:Array.from(s.ts), ys:s.m[m][kind], marker:MARKERS[m], width:1.8, hv:s.m[m][kind]});
+  return out;
+}
+function setupCharts(){
+  registerChart('v','c-v','tip-v', () => ({series:seriesFor('V'), times:state.sim.ts, timeLabel:'t', xLabel:'Tiempo (s)', yLabel:'Velocidad (m/s)', zero:true}), x => fmt(x,6)+' m/s');
+  registerChart('y','c-y','tip-y', () => ({series:seriesFor('Y'), times:state.sim.ts, timeLabel:'t', xLabel:'Tiempo (s)', yLabel:'Altura (m)', zero:false}), x => fmt(x,6)+' m');
+  registerChart('e','c-e','tip-e', () => {
+    const s = state.sim, v = $('err-var').value, logY = $('err-log').checked, series = [];
+    for(const m of METHODS) if(state.visible[m])
+      series.push({name:NAMES[m], color:COLORS[m], xs:Array.from(s.ts), ys:s.err[m][v==='v'?'EV':'EY'], marker:MARKERS[m], width:1.8, hv:s.err[m][v==='v'?'EV':'EY']});
+    return {series, times:s.ts, timeLabel:'t', xLabel:'Tiempo (s)', yLabel: v==='v'?'|Error de velocidad| (m/s)':'|Error de altura| (m)', logY, zero:true, empty:'Selecciona al menos un método numérico'};
+  }, x => fmtErr(x)+(($('err-var').value==='v')?' m/s':' m'));
+  registerChart('s','c-s','tip-s', () => {
+    const ok = state.steps.filter(r => !r.skipped), hs = ok.map(r => r.h).sort((a,b)=>a-b), series = [];
+    for(const m of METHODS) if(state.visible[m]){
+      const ys = hs.map(h => { const r = ok.find(q => q.h===h).sim; return r.err[m].EV[r.err[m].EV.length-1]; });
+      series.push({name:NAMES[m], color:COLORS[m], xs:hs, ys, marker:MARKERS[m], width:2, hv:ys});
+    }
+    return {series, times:hs, timeLabel:'h', timeUnit:' s', xTicks:hs, logX:true, logY:true, xLabel:'Tamaño de paso h (s)', yLabel:'|Error de velocidad| en t final (m/s)', empty:'Sin datos'};
+  }, x => fmtErr(x)+' m/s');
+}
+function renderCharts(){
+  Object.keys(charts).forEach(k => { const c = charts[k]; c.cfg = c.cfgFn(); drawChart(c.canvas, c.cfg, null); });
+  const keysNum = METHODS.filter(m => state.visible[m]);
+  const withEx = state.visible.exact ? ['exact'].concat(keysNum) : keysNum;
+  $('lg-v').innerHTML = legendHTML(withEx); $('lg-y').innerHTML = legendHTML(withEx);
+  $('lg-e').innerHTML = legendHTML(keysNum); $('lg-s').innerHTML = legendHTML(keysNum);
+}
+
+/* ---------- Comparación de pasos ---------- */
+function renderSteps(){
+  const head = $('tbl-steps').tHead, body = $('tbl-steps').tBodies[0];
+  head.innerHTML = '<tr><th>Método</th><th>Velocidad aprox. (m/s)</th><th>Altura aprox. (m)</th><th>Velocidad exacta (m/s)</th><th>Altura exacta (m)</th><th>|Error v| (m/s)</th><th>|Error y| (m)</th><th>Iteraciones</th><th>Orden obs. (v)</th></tr>';
+  let rows = '';
+  const prevErr = {};
+  const sorted = state.steps.slice();
+  // orden observado: se calcula comparando cada h con el paso inmediatamente mayor (2→1, 1→0.5)
+  sorted.forEach((r, idx) => {
+    if(r.skipped){ rows += '<tr class="grp"><td colspan="9">h = '+r.h+' s — omitido: supera '+MAX_STEPS+' pasos con el tiempo actual</td></tr>'; return; }
+    const s = r.sim, n = s.ts.length-1;
+    rows += '<tr class="grp"><td colspan="9">h = '+r.h+' s · '+n+' pasos · t final = '+fmt(s.ts[n],4)+' s</td></tr>';
+    for(const m of METHODS){
+      if(!state.visible[m]) continue;
+      const ev = s.err[m].EV[n], ey = s.err[m].EY[n];
+      const ord = prevErr[m]!=null ? fmt(observedOrder(prevErr[m], ev),2) : '—';
+      prevErr[m] = ev;
+      rows += '<tr><td>'+NAMES[m]+'</td><td>'+fmt(s.m[m].V[n],8)+'</td><td>'+fmt(s.m[m].Y[n],8)+'</td><td>'+fmt(s.ex.V[n],8)+'</td><td>'+fmt(s.ex.Y[n],8)+'</td><td>'+fmtErr(ev)+'</td><td>'+fmtErr(ey)+'</td><td>'+n+'</td><td>'+ord+'</td></tr>';
+    }
+  });
+  body.innerHTML = rows;
+}
+
+function renderAll(){ renderModel(); renderCards(); renderTable(); renderCharts(); renderSteps(); }
+
+/* ---------- CSV ---------- */
+function csvDownload(name, lines){
+  const blob = new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function exportMain(){
+  if(!state.sim) return; const sep = $('csv-sep').value, s = state.sim, n = s.ts.length, num = x => x.toFixed(8);
+  const head = ['t_s','v_euler','y_euler','v_heun','y_heun','v_rk4','y_rk4','v_exacta','y_exacta','errv_euler','erry_euler','errv_heun','erry_heun','errv_rk4','erry_rk4'];
+  const L = [head.join(sep)];
+  for(let i=0;i<n;i++){
+    const r = [s.ts[i]];
+    METHODS.forEach(m => { r.push(s.m[m].V[i], s.m[m].Y[i]); });
+    r.push(s.ex.V[i], s.ex.Y[i]);
+    METHODS.forEach(m => { r.push(s.err[m].EV[i], s.err[m].EY[i]); });
+    L.push(r.map(num).join(sep));
+  }
+  csvDownload('cohete_iteraciones_h'+fmtT(s.h)+'.csv', L);
+}
+function exportSteps(){
+  if(!state.steps) return; const sep = $('csv-sep').value, L = [['h_s','metodo','v_aprox','y_aprox','v_exacta','y_exacta','err_v','err_y','iteraciones'].join(sep)];
+  state.steps.forEach(r => { if(r.skipped) return; const s = r.sim, n = s.ts.length-1;
+    METHODS.forEach(m => L.push([r.h, NAMES[m], s.m[m].V[n].toFixed(8), s.m[m].Y[n].toFixed(8), s.ex.V[n].toFixed(8), s.ex.Y[n].toFixed(8), s.err[m].EV[n].toExponential(6), s.err[m].EY[n].toExponential(6), n].join(sep))); });
+  csvDownload('cohete_comparacion_pasos.csv', L);
+}
+
+/* ---------- Eventos ---------- */
+$('form').addEventListener('submit', e => { e.preventDefault(); run(); });
+$('reset').addEventListener('click', () => { writeDefaults(); run(); });
+document.querySelectorAll('[data-m]').forEach(cb => cb.addEventListener('change', () => { state.visible[cb.dataset.m] = cb.checked; if(state.sim){ renderCards(); renderTable(); renderCharts(); renderSteps(); } }));
+$('err-var').addEventListener('change', renderCharts); $('err-log').addEventListener('change', renderCharts);
+$('tab-sol').addEventListener('click', () => setTab('sol')); $('tab-err').addEventListener('click', () => setTab('err'));
+function setTab(t){ state.tab = t; $('tab-sol').setAttribute('aria-selected', t==='sol'); $('tab-err').setAttribute('aria-selected', t==='err'); if(state.sim) renderTable(); }
+$('csv-main').addEventListener('click', exportMain); $('csv-steps').addEventListener('click', exportSteps);
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if(state.sim) Object.keys(charts).forEach(k => drawChart(charts[k].canvas, charts[k].cfg, null)); }, 80); });
+
+writeDefaults(); setupCharts(); run();
+})();
+}
+</script>
+</body>
+</html>
